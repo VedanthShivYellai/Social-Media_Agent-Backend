@@ -9,7 +9,7 @@ import cors from "cors";
 import express from "express";
 
 // Local MCP request handler
-import { handleRequest as handleMcpRequest } from "./mcp-server.js";
+import { handleMcpRequest as handleMcpRequest } from "./mcp-server.js";
 
 
 // -----------------------------------------------------------------------------
