@@ -3,7 +3,7 @@ name: Build and Deploy to Render Staging
 on:
   push:
     branches:
-      - stage
+      - staging
 
 jobs:
   build-and-deploy:
