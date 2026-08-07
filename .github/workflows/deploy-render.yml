@@ -29,7 +29,7 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/social-media-agent:staging
+            ${{ secrets.DOCKERHUB_USERNAME }}/social-media-agent:stage
 
       - name: Trigger Render staging deployment
         run: curl --fail --request POST "${{ secrets.RENDER_DEPLOY_HOOK_URL_STAGING }}"
