@@ -337,7 +337,7 @@ function sleep(milliseconds) {
 async function waitForInstagramProcessing(
   containerId
 ) {
-  const maximumAttempts = 20;
+  const maximumAttempts = 60;
   const pollingIntervalMilliseconds = 3000;
 
   for (
@@ -383,7 +383,7 @@ async function waitForInstagramProcessing(
 }
 
 
-// Creates an Instagram media container
+// Creates an Instagram media container without waiting for processing
 async function createInstagramContainer({
   media,
   caption,
@@ -418,11 +418,25 @@ async function createInstagramContainer({
     );
   }
 
+  return sendInstagramGraphRequest(
+    `/${instagramAccountId}/media`,
+    containerRequestBody
+  );
+}
+
+
+// Creates a container and waits until Instagram finishes processing it
+async function createAndProcessInstagramContainer({
+  media,
+  caption,
+  isCarouselItem
+}) {
   const createdContainer =
-    await sendInstagramGraphRequest(
-      `/${instagramAccountId}/media`,
-      containerRequestBody
-    );
+    await createInstagramContainer({
+      media,
+      caption,
+      isCarouselItem
+    });
 
   await waitForInstagramProcessing(
     createdContainer.id
@@ -734,7 +748,7 @@ async function publishSingleInstagramPost({
     }
 
     const createdContainer =
-      await createInstagramContainer({
+      await createAndProcessInstagramContainer({
         media,
         caption,
         isCarouselItem: false
@@ -805,33 +819,44 @@ async function publishInstagramCarousel({
       );
     }
 
-    const carouselItems = [];
+    // Creates all child media containers concurrently
+    const createdChildContainers =
+      await Promise.all(
+        mediaItems.map((mediaItem) =>
+          createInstagramContainer({
+            media: mediaItem,
+            caption: "",
+            isCarouselItem: true
+          })
+        )
+      );
 
-    for (
-      let mediaIndex = 0;
-      mediaIndex < mediaItems.length;
-      mediaIndex++
-    ) {
-      const mediaItem =
-        mediaItems[mediaIndex];
+    // Waits for all child containers to finish processing concurrently
+    await Promise.all(
+      createdChildContainers.map(
+        (createdContainer) =>
+          waitForInstagramProcessing(
+            createdContainer.id
+          )
+      )
+    );
 
-      const carouselItemContainer =
-        await createInstagramContainer({
-          media: mediaItem,
-          caption: "",
-          isCarouselItem: true
-        });
-
-      carouselItems.push({
-        index: mediaIndex,
-        type: mediaItem.type,
-        url: mediaItem.url,
-        containerId:
-          carouselItemContainer.id,
-        container:
-          carouselItemContainer
-      });
-    }
+    const carouselItems =
+      mediaItems.map(
+        (mediaItem, mediaIndex) => ({
+          index: mediaIndex,
+          type: mediaItem.type,
+          url: mediaItem.url,
+          containerId:
+            createdChildContainers[
+              mediaIndex
+            ].id,
+          container:
+            createdChildContainers[
+              mediaIndex
+            ]
+        })
+      );
 
     const carouselParentContainer =
       await sendInstagramGraphRequest(

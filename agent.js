@@ -128,7 +128,7 @@ async function executeMcpToolCalls(functionCalls) {
       },
       undefined,
       {
-        timeout: 300000
+        timeout: 700000
       }
     );
 
