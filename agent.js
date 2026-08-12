@@ -285,6 +285,8 @@ export async function runAgent({ userMessage, mediaItems = [] }) {
       requestedFunctionCalls
     );
 
+    console.log(toolResponses);
+
     const functionCallParts = createFunctionCallParts(
       requestedFunctionCalls
     );
