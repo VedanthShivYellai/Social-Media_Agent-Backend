@@ -10,6 +10,8 @@ import express from "express";
 
 // Local MCP request handler
 import { handleMcpRequest as handleMcpRequest } from "./mcp-server.js";
+import { v2 as cloudinary } from "cloudinary";
+
 
 
 // -----------------------------------------------------------------------------
@@ -75,6 +77,15 @@ async function ensureMcpConnection() {
   isMcpConnected = true;
 }
 
+// -----------------------------------------------------------------------------
+// Cloudinary Support
+// -----------------------------------------------------------------------------
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 // -----------------------------------------------------------------------------
 // MCP and Gemini conversion helpers
@@ -189,6 +200,49 @@ function createUserMessageParts({ message, mediaItems }) {
   }
 
   return messageParts;
+}
+
+// -----------------------------------------------------------------------------
+// Cloudinary Cleanup
+// -----------------------------------------------------------------------------
+
+async function cleanupTemporaryMedia(mediaItems = []) {
+  if (!Array.isArray(mediaItems) || mediaItems.length === 0) {
+    return;
+  }
+
+  for (const mediaItem of mediaItems) {
+    if (!mediaItem.publicId) {
+      console.warn(
+        "Skipping cleanup because publicId was not provided."
+      );
+      continue;
+    }
+
+    try {
+      const resourceType =
+        mediaItem.resourceType === "video"
+          ? "video"
+          : "image";
+
+      const result = await cloudinary.uploader.destroy(
+        mediaItem.publicId,
+        {
+          resource_type: resourceType,
+          invalidate: true
+        }
+      );
+
+      console.log(
+        `Temporary media cleanup result for ${mediaItem.publicId}: ${result.result}`
+      );
+    } catch (error) {
+      console.error(
+        `Failed to delete temporary media ${mediaItem.publicId}:`,
+        error
+      );
+    }
+  }
 }
 
 
@@ -369,6 +423,29 @@ app.post("/agent", async (request, response) => {
     response.status(500).json({
       errorMessage: "There was an issue with the backend."
     });
+  }
+});
+
+app.post("/cleanup-media", async (request, response) => {
+  try {
+    const { mediaItems } = request.body;
+
+    if (!Array.isArray(mediaItems)) {
+      return response.status(400).json({
+        errorMessage: "Invalid media items."
+      });
+    }
+
+    await cleanupTemporaryMedia(mediaItems);
+
+    response.sendStatus(204);
+  } catch (error) {
+    console.error(
+      "Temporary media cleanup route failed:",
+      error
+    );
+
+    response.sendStatus(500);
   }
 });
 
