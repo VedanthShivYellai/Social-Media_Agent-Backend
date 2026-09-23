@@ -994,7 +994,7 @@ function createMcpServer() {
           .string()
           .optional()
           .describe(
-            "Optional caption for the Instagram post."
+            "Optional caption for the Instagram post. If there is no value given, the caption is an empty string"
           ),
 
         media: socialMediaItemSchema.describe(
@@ -1022,7 +1022,7 @@ function createMcpServer() {
           .string()
           .optional()
           .describe(
-            "Optional caption for the Instagram carousel."
+            "Optional caption for the Instagram carousel. If there is no value given, the caption is an empty string"
           ),
 
         mediaItems: z
